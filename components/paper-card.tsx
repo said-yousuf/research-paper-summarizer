@@ -1,103 +1,124 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { ChatBot } from '@/components/chatbot';
+import { SummaryViewer } from '@/components/summary-viewer';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
-  FileText,
-  Clock,
-  CheckCircle,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { useTheme } from '@/hooks/use-theme';
+import { formatDistanceToNow } from 'date-fns';
+import {
   AlertCircle,
-  Eye,
+  CheckCircle,
+  Clock,
   Download,
-  Trash2,
+  Eye,
+  FileCheck,
+  FileText,
   MessageCircle,
   Sparkles,
-  FileCheck,
-} from "lucide-react"
-import { formatDistanceToNow } from "date-fns"
-import { SummaryViewer } from "@/components/summary-viewer"
-import { ChatBot } from "@/components/chatbot"
-import { useTheme } from "@/hooks/use-theme"
+  Trash2,
+} from 'lucide-react';
+import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 interface Paper {
-  id: string
-  title: string
-  status: "processing" | "completed" | "error"
-  uploadedAt: Date
-  summary?: string
-  progress?: number
-  fullSummary?: string
-  compliance?: string
+  id: string;
+  title: string;
+  status: 'processing' | 'completed' | 'error';
+  uploadedAt: Date;
+  summary?: string;
+  progress?: number;
+  fullSummary?: string;
+  compliance?: string;
 }
 
 interface PaperCardProps {
-  paper: Paper
+  paper: Paper;
 }
 
 export function PaperCard({ paper }: PaperCardProps) {
-  const { theme } = useTheme()
-  const [showFullSummary, setShowFullSummary] = useState(false)
-  const [showSummaryViewer, setShowSummaryViewer] = useState(false)
-  const [showChatBot, setShowChatBot] = useState(false)
-  const [showCompliance, setShowCompliance] = useState(false)
+  const { theme } = useTheme();
+  const [showFullSummary, setShowFullSummary] = useState(false);
+  const [showSummaryViewer, setShowSummaryViewer] = useState(false);
+  const [showChatBot, setShowChatBot] = useState(false);
+  const [showCompliance, setShowCompliance] = useState(false);
 
   const getStatusIcon = () => {
     switch (paper.status) {
-      case "completed":
-        return <CheckCircle className="h-4 w-4" style={{ color: theme.success }} />
-      case "processing":
-        return <Clock className="h-4 w-4 animate-spin" style={{ color: theme.accent }} />
-      case "error":
-        return <AlertCircle className="h-4 w-4" style={{ color: theme.destructive }} />
+      case 'completed':
+        return (
+          <CheckCircle className="h-4 w-4" style={{ color: theme.success }} />
+        );
+      case 'processing':
+        return (
+          <Clock
+            className="h-4 w-4 animate-spin"
+            style={{ color: theme.accent }}
+          />
+        );
+      case 'error':
+        return (
+          <AlertCircle
+            className="h-4 w-4"
+            style={{ color: theme.destructive }}
+          />
+        );
     }
-  }
+  };
 
   const getStatusColor = () => {
     switch (paper.status) {
-      case "completed":
+      case 'completed':
         return {
           bg: `${theme.success}10`,
           text: theme.success,
           border: `${theme.success}30`,
           hover: `${theme.success}20`,
-        }
-      case "processing":
+        };
+      case 'processing':
         return {
           bg: `${theme.accent}10`,
           text: theme.accent,
           border: `${theme.accent}30`,
           hover: `${theme.accent}20`,
-        }
-      case "error":
+        };
+      case 'error':
         return {
           bg: `${theme.destructive}10`,
           text: theme.destructive,
           border: `${theme.destructive}30`,
           hover: `${theme.destructive}20`,
-        }
+        };
     }
-  }
+  };
 
   const truncatedSummary =
-    paper.summary && paper.summary.length > 200 ? paper.summary.substring(0, 200) + "..." : paper.summary
+    paper.summary && paper.summary.length > 200
+      ? paper.summary.substring(0, 200) + '...'
+      : paper.summary;
 
   const handleDownload = () => {
     if (paper.fullSummary) {
-      const blob = new Blob([paper.fullSummary], { type: "text/markdown" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `${paper.title.replace(".pdf", "")}_summary.md`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      const blob = new Blob([paper.fullSummary], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${paper.title.replace('.pdf', '')}_summary.md`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     }
-  }
+  };
 
-  const statusColors = getStatusColor()
+  const statusColors = getStatusColor();
 
   return (
     <>
@@ -117,7 +138,10 @@ export function PaperCard({ paper }: PaperCardProps) {
                   background: `linear-gradient(to bottom right, ${theme.primary}20, ${theme.secondary}20)`,
                 }}
               >
-                <FileText className="h-6 w-6" style={{ color: theme.primary }} />
+                <FileText
+                  className="h-6 w-6"
+                  style={{ color: theme.primary }}
+                />
               </div>
               <div className="flex-1">
                 <CardTitle
@@ -131,7 +155,8 @@ export function PaperCard({ paper }: PaperCardProps) {
                 </CardTitle>
                 <CardDescription className="flex items-center gap-2 mt-1">
                   <Clock className="h-3 w-3" />
-                  Uploaded {formatDistanceToNow(paper.uploadedAt, { addSuffix: true })}
+                  Uploaded{' '}
+                  {formatDistanceToNow(paper.uploadedAt, { addSuffix: true })}
                 </CardDescription>
               </div>
             </div>
@@ -146,7 +171,9 @@ export function PaperCard({ paper }: PaperCardProps) {
               }}
             >
               {getStatusIcon()}
-              <span className="ml-2 capitalize font-medium">{paper.status}</span>
+              <span className="ml-2 capitalize font-medium">
+                {paper.status}
+              </span>
             </Badge>
           </div>
         </CardHeader>
@@ -162,14 +189,25 @@ export function PaperCard({ paper }: PaperCardProps) {
                 }}
               >
                 <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="h-4 w-4" style={{ color: theme.primary }} />
-                  <h4 className="font-semibold" style={{ color: theme.primary }}>
+                  <Sparkles
+                    className="h-4 w-4"
+                    style={{ color: theme.primary }}
+                  />
+                  <h4
+                    className="font-semibold"
+                    style={{ color: theme.primary }}
+                  >
                     AI Summary
                   </h4>
                 </div>
-                <p className="text-sm leading-relaxed" style={{ color: `${theme.foreground}90` }}>
-                  {showFullSummary ? paper.summary : truncatedSummary}
-                </p>
+                <div
+                  className="prose max-w-none text-sm leading-relaxed"
+                  style={{ color: `${theme.foreground}90` }}
+                >
+                  <ReactMarkdown>
+                    {showFullSummary ? paper.summary : truncatedSummary}
+                  </ReactMarkdown>
+                </div>
                 {paper.summary.length > 200 && (
                   <Button
                     variant="link"
@@ -178,7 +216,7 @@ export function PaperCard({ paper }: PaperCardProps) {
                     style={{ color: theme.primary }}
                     onClick={() => setShowFullSummary(!showFullSummary)}
                   >
-                    {showFullSummary ? "Show less" : "Read more"}
+                    {showFullSummary ? 'Show less' : 'Read more'}
                   </Button>
                 )}
               </div>
@@ -192,8 +230,14 @@ export function PaperCard({ paper }: PaperCardProps) {
                   }}
                 >
                   <div className="flex items-center gap-2 mb-3">
-                    <FileCheck className="h-4 w-4" style={{ color: theme.secondary }} />
-                    <h4 className="font-semibold" style={{ color: theme.secondary }}>
+                    <FileCheck
+                      className="h-4 w-4"
+                      style={{ color: theme.secondary }}
+                    />
+                    <h4
+                      className="font-semibold"
+                      style={{ color: theme.secondary }}
+                    >
                       Structure Analysis
                     </h4>
                   </div>
@@ -262,7 +306,7 @@ export function PaperCard({ paper }: PaperCardProps) {
                     }}
                   >
                     <FileCheck className="h-4 w-4 mr-2" />
-                    {showCompliance ? "Hide Structure" : "Show Structure"}
+                    {showCompliance ? 'Hide Structure' : 'Show Structure'}
                   </Button>
                 )}
 
@@ -287,10 +331,17 @@ export function PaperCard({ paper }: PaperCardProps) {
       </Card>
 
       {/* Summary Viewer Modal */}
-      {showSummaryViewer && <SummaryViewer paper={paper} onClose={() => setShowSummaryViewer(false)} />}
+      {showSummaryViewer && (
+        <SummaryViewer
+          paper={paper}
+          onClose={() => setShowSummaryViewer(false)}
+        />
+      )}
 
       {/* ChatBot Modal */}
-      {showChatBot && <ChatBot paper={paper} onClose={() => setShowChatBot(false)} />}
+      {showChatBot && (
+        <ChatBot paper={paper} onClose={() => setShowChatBot(false)} />
+      )}
     </>
-  )
+  );
 }

@@ -61,13 +61,72 @@ export default function DashboardPage() {
     setPapers((prev) => [...newPapers, ...prev]);
     setShowUpload(false);
 
-    // Process each file with the API
     for (let i = 0; i < files.length; i++) {
       const paper = newPapers[i];
-      const fileContent = fileContents?.[i];
+      const file = files[i];
 
-      if (fileContent && files[i].type === 'application/pdf') {
-        processWithAPI(paper.id, fileContent);
+      if (file.type === 'application/pdf') {
+        // Read file as base64
+        const b64 = await new Promise<string>((res, rej) => {
+          const fr = new FileReader();
+          fr.onload = () =>
+            fr.result
+              ? res((fr.result as string).split(',')[1])
+              : rej('Empty file');
+          fr.onerror = () => rej('Read error');
+          fr.readAsDataURL(file);
+        });
+
+        setPapers((prev) =>
+          prev.map((p) =>
+            p.id === paper.id
+              ? { ...p, stage: 'Processing with AI...', progress: 30 }
+              : p
+          )
+        );
+
+        try {
+          const resp = await fetch('/api/paper', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pdfBase64: b64 }),
+          });
+
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || 'Server error');
+
+          setPapers((prev) =>
+            prev.map((p) =>
+              p.id === paper.id
+                ? {
+                    ...p,
+                    status: 'completed',
+                    progress: 100,
+                    stage: undefined,
+                    summary: data.summary || 'AI-generated summary.',
+                    fullSummary: data.summary || 'AI-generated summary.',
+                    compliance:
+                      data.compliance || 'Structure analysis not available.',
+                  }
+                : p
+            )
+          );
+        } catch (e: any) {
+          setPapers((prev) =>
+            prev.map((p) =>
+              p.id === paper.id
+                ? {
+                    ...p,
+                    status: 'error',
+                    progress: 100,
+                    stage: undefined,
+                    summary: 'An error occurred while processing this paper.',
+                    error: e?.message || 'Unknown error occurred',
+                  }
+                : p
+            )
+          );
+        }
       } else {
         simulateProcessing(paper.id);
       }

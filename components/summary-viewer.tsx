@@ -1,91 +1,56 @@
-"use client"
+'use client';
 
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Download, X, FileText, Sparkles, FileCheck } from "lucide-react"
-import { useTheme } from "@/hooks/use-theme"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useTheme } from '@/hooks/use-theme';
+import { Download, FileCheck, FileText, Sparkles } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 interface Paper {
-  id: string
-  title: string
-  status: "processing" | "completed" | "error"
-  uploadedAt: Date
-  summary?: string
-  fullSummary?: string
-  compliance?: string
+  id: string;
+  title: string;
+  status: 'processing' | 'completed' | 'error';
+  uploadedAt: Date;
+  summary?: string;
+  fullSummary?: string;
+  compliance?: string;
 }
 
 interface SummaryViewerProps {
-  paper: Paper
-  onClose: () => void
+  paper: Paper;
+  onClose: () => void;
 }
 
 export function SummaryViewer({ paper, onClose }: SummaryViewerProps) {
-  const { theme } = useTheme()
+  const { theme } = useTheme();
 
   const handleDownload = () => {
     if (paper.fullSummary) {
-      const blob = new Blob([paper.fullSummary], { type: "text/markdown" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `${paper.title.replace(".pdf", "")}_summary.md`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      const blob = new Blob([paper.fullSummary], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${paper.title.replace('.pdf', '')}_summary.md`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     }
-  }
-
-  const formatSummary = (text: string) => {
-    return text.split("\n").map((line, index) => {
-      if (line.startsWith("# ")) {
-        return (
-          <h1 key={index} className="text-2xl font-bold mb-4 mt-6" style={{ color: theme.primary }}>
-            {line.substring(2)}
-          </h1>
-        )
-      } else if (line.startsWith("## ")) {
-        return (
-          <h2 key={index} className="text-xl font-semibold mb-3 mt-5" style={{ color: theme.secondary }}>
-            {line.substring(3)}
-          </h2>
-        )
-      } else if (line.startsWith("### ")) {
-        return (
-          <h3 key={index} className="text-lg font-medium mb-2 mt-4" style={{ color: theme.accent }}>
-            {line.substring(4)}
-          </h3>
-        )
-      } else if (line.startsWith("- ")) {
-        return (
-          <li key={index} className="ml-4 mb-1" style={{ color: `${theme.foreground}70` }}>
-            {line.substring(2)}
-          </li>
-        )
-      } else if (line.startsWith("**") && line.endsWith("**")) {
-        return (
-          <p key={index} className="font-semibold mb-2">
-            {line.slice(2, -2)}
-          </p>
-        )
-      } else if (line.trim() === "") {
-        return <br key={index} />
-      } else {
-        return (
-          <p key={index} className="mb-2 leading-relaxed" style={{ color: theme.foreground }}>
-            {line}
-          </p>
-        )
-      }
-    })
-  }
+  };
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] p-0" style={{ backgroundColor: theme.background }}>
+      <DialogContent
+        className="max-w-4xl w-full p-0 overflow-hidden"
+        style={{ backgroundColor: theme.background }}
+      >
         <DialogHeader
           className="p-6 pb-4 border-b"
           style={{
@@ -105,10 +70,16 @@ export function SummaryViewer({ paper, onClose }: SummaryViewerProps) {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4" style={{ color: theme.primary }} />
+                  <Sparkles
+                    className="h-4 w-4"
+                    style={{ color: theme.primary }}
+                  />
                   <span>AI Analysis</span>
                 </div>
-                <p className="text-sm font-normal mt-1" style={{ color: `${theme.foreground}70` }}>
+                <p
+                  className="text-sm font-normal mt-1"
+                  style={{ color: `${theme.foreground}70` }}
+                >
                   {paper.title}
                 </p>
               </div>
@@ -123,14 +94,6 @@ export function SummaryViewer({ paper, onClose }: SummaryViewerProps) {
                 <Download className="h-4 w-4 mr-2" />
                 Download
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClose}
-                className="hover:scale-105 transition-transform duration-300"
-              >
-                <X className="h-4 w-4" />
-              </Button>
             </div>
           </div>
         </DialogHeader>
@@ -143,8 +106,7 @@ export function SummaryViewer({ paper, onClose }: SummaryViewerProps) {
                 className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-3 px-6"
                 style={{
                   color: theme.foreground,
-                  borderColor: "transparent",
-                  dataState: { active: { borderColor: theme.primary, color: theme.primary } },
+                  borderColor: 'transparent',
                 }}
               >
                 <Sparkles className="h-4 w-4 mr-2" />
@@ -156,8 +118,7 @@ export function SummaryViewer({ paper, onClose }: SummaryViewerProps) {
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-secondary data-[state=active]:shadow-none py-3 px-6"
                   style={{
                     color: theme.foreground,
-                    borderColor: "transparent",
-                    dataState: { active: { borderColor: theme.secondary, color: theme.secondary } },
+                    borderColor: 'transparent',
                   }}
                 >
                   <FileCheck className="h-4 w-4 mr-2" />
@@ -168,12 +129,16 @@ export function SummaryViewer({ paper, onClose }: SummaryViewerProps) {
           </div>
 
           <TabsContent value="summary" className="mt-0">
-            <ScrollArea className="flex-1 p-6 max-h-[70vh]">
-              <div className="prose prose-sm max-w-none">
-                {paper.fullSummary ? (
-                  formatSummary(paper.fullSummary)
+            <ScrollArea className="flex-1 p-6 max-h-[70vh] w-full overflow-auto">
+              <div className="prose prose-sm w-full max-w-full break-words">
+                {paper.fullSummary || paper.summary ? (
+                  <ReactMarkdown>
+                    {paper.fullSummary || paper.summary || ''}
+                  </ReactMarkdown>
                 ) : (
-                  <p style={{ color: `${theme.foreground}70` }}>No detailed summary available.</p>
+                  <p style={{ color: `${theme.foreground}70` }}>
+                    No detailed summary available.
+                  </p>
                 )}
               </div>
             </ScrollArea>
@@ -181,12 +146,18 @@ export function SummaryViewer({ paper, onClose }: SummaryViewerProps) {
 
           {paper.compliance && (
             <TabsContent value="structure" className="mt-0">
-              <ScrollArea className="flex-1 p-6 max-h-[70vh]">
+              <ScrollArea className="flex-1 p-6 max-h-[70vh] max-w-full overflow-auto">
                 <div className="prose prose-sm max-w-none">
-                  <h2 className="text-xl font-semibold mb-4" style={{ color: theme.secondary }}>
+                  <h2
+                    className="text-xl font-semibold mb-4"
+                    style={{ color: theme.secondary }}
+                  >
                     Paper Structure Analysis
                   </h2>
-                  <pre className="whitespace-pre-wrap text-base leading-relaxed" style={{ color: theme.foreground }}>
+                  <pre
+                    className="whitespace-pre-wrap text-base leading-relaxed"
+                    style={{ color: theme.foreground }}
+                  >
                     {paper.compliance}
                   </pre>
                 </div>
@@ -196,5 +167,5 @@ export function SummaryViewer({ paper, onClose }: SummaryViewerProps) {
         </Tabs>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
