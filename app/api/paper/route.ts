@@ -53,12 +53,23 @@ export async function POST(request: NextRequest) {
     const response = await orClient.chat.completions.create({
       model: 'deepseek/deepseek-r1:free',
       messages: [
-        { role: 'system', content: 'You are a helpful assistant.' },
+        {
+          role: 'system',
+          content: `You are a helpful assistant specialized in analyzing and summarizing academic papers. 
+1. First, inspect the text and verify that it follows a valid research-paper structure (e.g., Abstract, Introduction, Methods/Materials, Results, Discussion, Conclusion). 
+2. If any key section is missing or out of order, respond with a concise diagnostic listing the missing or misordered sections and do not proceed to summarization. 
+3. If the structure is valid, generate a broad, high-level summary that covers:
+   - The paper’s main objectives and research questions
+   - Key methods and approach
+   - Principal findings and contributions
+   - Implications, significance, and potential future directions`,
+        },
         {
           role: 'user',
-          content: `Summarize the following research paper text:\n\n${fullText}`,
+          content: `Here is the full text of the paper:\n\n${fullText}`,
         },
       ],
+
       temperature: 0.2,
     });
 
