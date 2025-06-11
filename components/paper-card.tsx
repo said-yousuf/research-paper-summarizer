@@ -65,10 +65,7 @@ export function PaperCard({ paper }: PaperCardProps) {
         );
       case 'error':
         return (
-          <AlertCircle
-            className="h-4 w-4"
-            style={{ color: theme.destructive }}
-          />
+          <AlertCircle className="h-4 w-4" style={{ color: theme.error }} />
         );
     }
   };
@@ -91,10 +88,10 @@ export function PaperCard({ paper }: PaperCardProps) {
         };
       case 'error':
         return {
-          bg: `${theme.destructive}10`,
-          text: theme.destructive,
-          border: `${theme.destructive}30`,
-          hover: `${theme.destructive}20`,
+          bg: `${theme.error}10`,
+          text: theme.error,
+          border: `${theme.error}30`,
+          hover: `${theme.error}20`,
         };
     }
   };
@@ -123,10 +120,9 @@ export function PaperCard({ paper }: PaperCardProps) {
   return (
     <>
       <Card
-        className="border-2 hover:shadow-xl group animate-fade-in transition-all duration-300"
+        className="border-2 hover:shadow-xl group animate-fade-in transition-all duration-300 hover:border-primary"
         style={{
           borderColor: `${theme.primary}40`,
-          hover: { borderColor: `${theme.primary}` },
         }}
       >
         <CardHeader>
@@ -145,10 +141,9 @@ export function PaperCard({ paper }: PaperCardProps) {
               </div>
               <div className="flex-1">
                 <CardTitle
-                  className="text-xl group-hover:transition-colors duration-300"
+                  className="text-xl group-hover:text-primary transition-colors duration-300"
                   style={{
                     color: theme.foreground,
-                    hover: { color: theme.primary },
                   }}
                 >
                   {paper.title}
@@ -162,12 +157,11 @@ export function PaperCard({ paper }: PaperCardProps) {
             </div>
             <Badge
               variant="outline"
-              className="transition-colors duration-300"
+              className="transition-colors duration-300 hover:opacity-90"
               style={{
                 backgroundColor: statusColors.bg,
                 color: statusColors.text,
                 borderColor: statusColors.border,
-                hover: { backgroundColor: statusColors.hover },
               }}
             >
               {getStatusIcon()}
@@ -208,8 +202,9 @@ export function PaperCard({ paper }: PaperCardProps) {
                     {showFullSummary ? paper.summary : truncatedSummary}
                   </ReactMarkdown>
                 </div>
-                {paper.summary.length > 200 && (
+                {paper.summary && paper.summary.length > 200 && (
                   <Button
+                    type="button"
                     variant="link"
                     size="sm"
                     className="p-0 h-auto mt-2 hover:text-primary-600"
@@ -252,13 +247,13 @@ export function PaperCard({ paper }: PaperCardProps) {
 
               <div className="flex flex-wrap items-center gap-3">
                 <Button
+                  type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setShowSummaryViewer(true)}
-                  className="hover:scale-105 transition-all duration-300"
+                  className="hover:scale-105 hover:border-primary transition-all duration-300"
                   style={{
                     borderColor: `${theme.primary}30`,
-                    hover: { borderColor: theme.primary },
                   }}
                 >
                   <Eye className="h-4 w-4 mr-2" />
@@ -266,13 +261,13 @@ export function PaperCard({ paper }: PaperCardProps) {
                 </Button>
 
                 <Button
+                  type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setShowChatBot(true)}
-                  className="hover:scale-105 transition-all duration-300"
+                  className="hover:scale-105 hover:border-secondary transition-all duration-300"
                   style={{
                     borderColor: `${theme.secondary}30`,
-                    hover: { borderColor: theme.secondary },
                     background: `linear-gradient(to right, ${theme.secondary}05, ${theme.secondary}10)`,
                   }}
                 >
@@ -281,13 +276,13 @@ export function PaperCard({ paper }: PaperCardProps) {
                 </Button>
 
                 <Button
+                  type="button"
                   variant="outline"
                   size="sm"
                   onClick={handleDownload}
-                  className="hover:scale-105 transition-all duration-300"
+                  className="hover:scale-105 hover:border-accent transition-all duration-300"
                   style={{
                     borderColor: `${theme.accent}30`,
-                    hover: { borderColor: theme.accent },
                   }}
                 >
                   <Download className="h-4 w-4 mr-2" />
@@ -296,13 +291,13 @@ export function PaperCard({ paper }: PaperCardProps) {
 
                 {paper.compliance && (
                   <Button
+                    type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => setShowCompliance(!showCompliance)}
-                    className="hover:scale-105 transition-all duration-300"
+                    className="hover:scale-105 hover:border-secondary transition-all duration-300"
                     style={{
                       borderColor: `${theme.secondary}30`,
-                      hover: { borderColor: theme.secondary },
                     }}
                   >
                     <FileCheck className="h-4 w-4 mr-2" />
@@ -311,14 +306,13 @@ export function PaperCard({ paper }: PaperCardProps) {
                 )}
 
                 <Button
+                  type="button"
                   variant="outline"
                   size="sm"
-                  className="hover:scale-105 transition-all duration-300"
+                  className="hover:scale-105 hover:border-destructive hover:text-destructive transition-all duration-300"
                   style={{
-                    color: theme.destructive,
-                    hover: { color: `${theme.destructive}` },
-                    borderColor: `${theme.destructive}30`,
-                    hover: { borderColor: theme.destructive },
+                    color: theme.error,
+                    borderColor: `${theme.error}30`,
                   }}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />

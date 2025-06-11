@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { FileUpload } from '@/components/file-upload';
@@ -45,10 +46,7 @@ export default function DashboardPage() {
   const [papers, setPapers] = useState<Paper[]>([]);
   const [showUpload, setShowUpload] = useState(false);
 
-  const handleFilesUploaded = async (
-    files: File[],
-    fileContents?: string[]
-  ) => {
+  const handleFilesUploaded = async (files: File[]) => {
     const newPapers: Paper[] = files.map((file) => ({
       id: Math.random().toString(36).substr(2, 9),
       title: file.name,
@@ -133,150 +131,150 @@ export default function DashboardPage() {
     }
   };
 
-  const processWithAPI = async (paperId: string, fileContent: string) => {
-    const stages = [
-      'Uploading file...',
-      'Extracting text content...',
-      'Analyzing with AI...',
-      'Generating summary...',
-      'Checking paper structure...',
-      'Preparing results...',
-    ];
+  // const processWithAPI = async (paperId: string, fileContent: string) => {
+  //   const stages = [
+  //     'Uploading file...',
+  //     'Extracting text content...',
+  //     'Analyzing with AI...',
+  //     'Generating summary...',
+  //     'Checking paper structure...',
+  //     'Preparing results...',
+  //   ];
 
-    let stageIndex = 0;
-    let progress = 0;
+  //   let stageIndex = 0;
+  //   let progress = 0;
 
-    // Update progress function
-    const updateProgress = () => {
-      if (stageIndex >= stages.length) return;
+  //   // Update progress function
+  //   const updateProgress = () => {
+  //     if (stageIndex >= stages.length) return;
 
-      setPapers((prev) =>
-        prev.map((p) =>
-          p.id === paperId ? { ...p, progress, stage: stages[stageIndex] } : p
-        )
-      );
-    };
+  //     setPapers((prev) =>
+  //       prev.map((p) =>
+  //         p.id === paperId ? { ...p, progress, stage: stages[stageIndex] } : p
+  //       )
+  //     );
+  //   };
 
-    // Initial progress update
-    updateProgress();
+  //   // Initial progress update
+  //   updateProgress();
 
-    // Simulate file upload
-    await simulateStage(0, 15, (p) => {
-      progress = p;
-      updateProgress();
-    });
+  //   // Simulate file upload
+  //   await simulateStage(0, 15, (p) => {
+  //     progress = p;
+  //     updateProgress();
+  //   });
 
-    // Simulate text extraction
-    stageIndex = 1;
-    await simulateStage(15, 30, (p) => {
-      progress = p;
-      updateProgress();
-    });
+  //   // Simulate text extraction
+  //   stageIndex = 1;
+  //   await simulateStage(15, 30, (p) => {
+  //     progress = p;
+  //     updateProgress();
+  //   });
 
-    try {
-      // Start AI analysis
-      stageIndex = 2;
-      updateProgress();
-      progress = 45;
-      updateProgress();
+  //   try {
+  //     // Start AI analysis
+  //     stageIndex = 2;
+  //     updateProgress();
+  //     progress = 45;
+  //     updateProgress();
 
-      // Call the API
-      const response = await fetch('/api/paper', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ pdfBase64: fileContent }),
-      });
+  //     // Call the API
+  //     const response = await fetch('/api/paper', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify({ pdfBase64: fileContent }),
+  //     });
 
-      const data = await response.json();
+  //     const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'API request failed');
-      }
+  //     if (!response.ok) {
+  //       throw new Error(data.error || 'API request failed');
+  //     }
 
-      // Generating summary
-      stageIndex = 3;
-      progress = 60;
-      updateProgress();
+  //     // Generating summary
+  //     stageIndex = 3;
+  //     progress = 60;
+  //     updateProgress();
 
-      // Checking structure
-      stageIndex = 4;
-      progress = 75;
-      updateProgress();
+  //     // Checking structure
+  //     stageIndex = 4;
+  //     progress = 75;
+  //     updateProgress();
 
-      // Preparing results
-      stageIndex = 5;
-      progress = 90;
-      updateProgress();
+  //     // Preparing results
+  //     stageIndex = 5;
+  //     progress = 90;
+  //     updateProgress();
 
-      // Complete
-      setTimeout(() => {
-        setPapers((prev) =>
-          prev.map((p) =>
-            p.id === paperId
-              ? {
-                  ...p,
-                  status: 'completed',
-                  progress: 100,
-                  stage: undefined,
-                  summary:
-                    data.summary ||
-                    'AI-generated summary of the research paper.',
-                  fullSummary:
-                    data.summary ||
-                    'AI-generated comprehensive summary of the research paper.',
-                  compliance:
-                    data.compliance || 'Structure analysis not available.',
-                }
-              : p
-          )
-        );
-      }, 1000);
-    } catch (error) {
-      console.error('Error processing paper with API:', error);
+  //     // Complete
+  //     setTimeout(() => {
+  //       setPapers((prev) =>
+  //         prev.map((p) =>
+  //           p.id === paperId
+  //             ? {
+  //                 ...p,
+  //                 status: 'completed',
+  //                 progress: 100,
+  //                 stage: undefined,
+  //                 summary:
+  //                   data.summary ||
+  //                   'AI-generated summary of the research paper.',
+  //                 fullSummary:
+  //                   data.summary ||
+  //                   'AI-generated comprehensive summary of the research paper.',
+  //                 compliance:
+  //                   data.compliance || 'Structure analysis not available.',
+  //               }
+  //             : p
+  //         )
+  //       );
+  //     }, 1000);
+  //   } catch (error) {
+  //     console.error('Error processing paper with API:', error);
 
-      // Set error state
-      setPapers((prev) =>
-        prev.map((p) =>
-          p.id === paperId
-            ? {
-                ...p,
-                status: 'error',
-                progress: 100,
-                stage: undefined,
-                summary: 'An error occurred while processing this paper.',
-                error:
-                  error instanceof Error
-                    ? error.message
-                    : 'Unknown error occurred',
-              }
-            : p
-        )
-      );
-    }
-  };
+  //     // Set error state
+  //     setPapers((prev) =>
+  //       prev.map((p) =>
+  //         p.id === paperId
+  //           ? {
+  //               ...p,
+  //               status: 'error',
+  //               progress: 100,
+  //               stage: undefined,
+  //               summary: 'An error occurred while processing this paper.',
+  //               error:
+  //                 error instanceof Error
+  //                   ? error.message
+  //                   : 'Unknown error occurred',
+  //             }
+  //           : p
+  //       )
+  //     );
+  //   }
+  // };
 
-  const simulateStage = (
-    startProgress: number,
-    endProgress: number,
-    callback: (progress: number) => void
-  ) => {
-    return new Promise<void>((resolve) => {
-      let currentProgress = startProgress;
-      const interval = setInterval(() => {
-        currentProgress += Math.random() * 3;
-        if (currentProgress >= endProgress) {
-          currentProgress = endProgress;
-          clearInterval(interval);
-          callback(currentProgress);
-          resolve();
-        } else {
-          callback(currentProgress);
-        }
-      }, 200);
-    });
-  };
+  // const simulateStage = (
+  //   startProgress: number,
+  //   endProgress: number,
+  //   callback: (progress: number) => void
+  // ) => {
+  //   return new Promise<void>((resolve) => {
+  //     let currentProgress = startProgress;
+  //     const interval = setInterval(() => {
+  //       currentProgress += Math.random() * 3;
+  //       if (currentProgress >= endProgress) {
+  //         currentProgress = endProgress;
+  //         clearInterval(interval);
+  //         callback(currentProgress);
+  //         resolve();
+  //       } else {
+  //         callback(currentProgress);
+  //       }
+  //     }, 200);
+  //   });
+  // };
 
   const simulateProcessing = (paperId: string) => {
     // Fallback for non-PDF files

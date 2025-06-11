@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // lib/pdf.ts
 import PDFParser from 'pdf2json';
 
@@ -16,10 +17,6 @@ export async function extractPdfPages(buffer: Buffer): Promise<string[]> {
 
     parser.on('pdfParser_dataReady', (pdfData: unknown) => {
       try {
-        // Debug: log the structure of pdfData
-        console.dir(pdfData, { depth: null });
-        console.log('PDF data parsed successfully');
-
         interface TextRun {
           T: string;
         }
@@ -30,8 +27,6 @@ export async function extractPdfPages(buffer: Buffer): Promise<string[]> {
           Texts: TextItem[];
         }
         const data = pdfData as { Pages?: Page[] };
-        console.log('Extracting pages from PDF data');
-        console.log('data: ', data);
         if (!Array.isArray(data.Pages)) {
           throw new Error('PDF data does not contain Pages');
         }

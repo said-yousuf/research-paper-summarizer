@@ -1,31 +1,76 @@
-"use client"
+'use client';
 
-import { createContext, useContext, type ReactNode } from "react"
-
-// Simple fixed theme for now
-const fixedTheme = {
-  name: "Cosmic Indigo",
-  description: "Elegant purples and blues for a professional look",
-  primary: "#6366f1",
-  secondary: "#06b6d4",
-  accent: "#f59e0b",
-  success: "#10b981",
-  background: "#ffffff",
-  foreground: "#0f172a",
-  muted: "#f8fafc",
-  border: "#e2e8f0",
-}
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { themes, type ThemeColors } from '@/lib/themes';
 
 type ThemeContextType = {
-  theme: typeof fixedTheme
-}
+  theme: ThemeColors;
+  setTheme: (theme: ThemeColors) => void;
+};
+
+const defaultTheme = themes[0];
 
 const ThemeContext = createContext<ThemeContextType>({
-  theme: fixedTheme,
-})
+  theme: defaultTheme,
+  setTheme: () => {},
+});
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-  return <ThemeContext.Provider value={{ theme: fixedTheme }}>{children}</ThemeContext.Provider>
-}
+  const [theme, setThemeState] = useState<ThemeColors>(defaultTheme);
+  const [isMounted, setIsMounted] = useState(false);
 
-export const useTheme = () => useContext(ThemeContext)
+  // Load saved theme from localStorage on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+      try {
+        const parsedTheme = JSON.parse(savedTheme);
+        const themeExists = themes.some(t => t.name === parsedTheme.name);
+        if (themeExists) {
+          setThemeState(parsedTheme);
+        }
+      } catch (e) {
+        console.error('Failed to parse saved theme', e);
+      }
+    }
+    setIsMounted(true);
+  }, []);
+
+  // Update CSS variables when theme changes
+  useEffect(() => {
+    if (!isMounted) return;
+    
+    // Update CSS variables
+    const root = document.documentElement;
+    root.style.setProperty('--primary', theme.primary);
+    root.style.setProperty('--secondary', theme.secondary);
+    root.style.setProperty('--accent', theme.accent);
+    root.style.setProperty('--success', theme.success);
+    root.style.setProperty('--background', theme.background);
+    root.style.setProperty('--foreground', theme.foreground);
+    root.style.setProperty('--muted', theme.muted);
+    root.style.setProperty('--border', theme.border);
+    root.style.setProperty('--error', theme.error);
+
+    // Save to localStorage
+    localStorage.setItem('theme', JSON.stringify(theme));
+  }, [theme, isMounted]);
+
+  const setTheme = (newTheme: ThemeColors) => {
+    setThemeState(newTheme);
+  };
+
+  return (
+    <ThemeContext.Provider value={{ theme, setTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+};
+
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (context === undefined) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
+};

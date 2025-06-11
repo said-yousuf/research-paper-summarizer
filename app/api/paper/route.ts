@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { orClient } from '@/lib/openrouter';
 import { extractPdfPages } from '@/lib/pdf';
 import type { NextRequest } from 'next/server';
@@ -42,12 +43,9 @@ export async function POST(request: NextRequest) {
     // Decode Base64 and extract pages
     const buffer = Buffer.from(body.pdfBase64, 'base64');
     const pages = await extractPdfPages(buffer);
-    console.log(`Extracted ${pages.length} pages from PDF`);
 
     // Combine all page text into a single string
     const fullText = pages.join('\n\n');
-    console.log(`Combined text length: ${fullText.length} characters`);
-    console.log(`First 500 characters: ${fullText.slice(0, 500)}`);
 
     // Call OpenRouter with the extracted text
     const response = await orClient.chat.completions.create({
