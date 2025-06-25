@@ -11,8 +11,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTheme } from '@/hooks/use-theme';
-import { Bot, Brain, MessageCircle, Send, User, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useChatStore } from '@/lib/store/chat-store';
+import { Bot, Brain, MessageCircle, Send, User } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import remarkGfm from 'remark-gfm';
 
 interface Paper {
   id: string;
@@ -21,111 +26,299 @@ interface Paper {
   uploadedAt: Date;
   summary?: string;
   fullSummary?: string;
-}
-
-interface Message {
-  id: string;
-  type: 'user' | 'bot';
-  content: string;
-  timestamp: Date;
+  compliance?: string;
 }
 
 interface ChatBotProps {
   paper: Paper;
   onClose: () => void;
+  open: boolean;
 }
 
-export function ChatBot({ paper, onClose }: ChatBotProps) {
+// Memoize the suggested questions outside the component
+const SUGGESTED_QUESTIONS = [
+  'What are the main findings?',
+  'Explain the methodology',
+  'What are the limitations?',
+  'How does this relate to other research?',
+  'What are the practical applications?',
+] as const;
+
+export function ChatBot({ paper, onClose, open }: ChatBotProps) {
   const { theme } = useTheme();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      type: 'bot',
-      content: `Hello! I'm your AI research assistant. I've analyzed "${paper.title}" and I'm ready to answer any questions you have about this paper. What would you like to know?`,
-      timestamp: new Date(),
-    },
-  ]);
-  const [inputValue, setInputValue] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const [inputValue, setInputValue] = useState('');
 
-  const suggestedQuestions = [
-    'What are the main findings?',
-    'Explain the methodology',
-    'What are the limitations?',
-    'How does this relate to other research?',
-    'What are the practical applications?',
-  ];
+  // Use Zustand selectors with proper memoization
+  const messages = useChatStore(
+    useCallback((state) => state.messages[paper.id] || [], [paper.id])
+  );
 
+  const isLoading = useChatStore((state) => state.isLoading);
+  const addMessage = useChatStore((state) => state.addMessage);
+  const setLoading = useChatStore((state) => state.setLoading);
+
+  // Memoize the welcome message
+  const welcomeMessage = useMemo(
+    () => ({
+      role: 'assistant' as const,
+      content: `Hello! I'm your AI research assistant. I've analyzed "${paper.title}" and I'm ready to answer any questions you have about this paper. What would you like to know?`,
+    }),
+    [paper.title]
+  );
+
+  // Initialize with welcome message if no messages exist
+  const hasInitialized = useRef(false);
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    if (open && messages.length === 0 && !hasInitialized.current) {
+      hasInitialized.current = true;
+      // Check if we've already shown the welcome message for this session
+      const hasWelcomeMessage = messages.some(
+        (msg) =>
+          msg.role === 'assistant' &&
+          msg.content.includes("I'm your AI research assistant")
+      );
+      if (!hasWelcomeMessage) {
+        const welcomeMsg = {
+          ...welcomeMessage,
+          id: 'welcome-' + Date.now(),
+          timestamp: Date.now(),
+        };
+        addMessage(paper.id, welcomeMsg);
+      }
     }
+  }, [open, messages, paper.id, addMessage, welcomeMessage]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    scrollAreaRef.current?.scrollTo({
+      top: scrollAreaRef.current.scrollHeight,
+      behavior: 'smooth',
+    });
   }, [messages]);
 
-  const handleSendMessage = async (content: string) => {
-    if (!content.trim()) return;
+  // Memoize the handleSendMessage function
+  const handleSendMessage = useCallback(
+    async (content: string) => {
+      if (!content.trim() || isLoading) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      type: 'user',
-      content: content.trim(),
-      timestamp: new Date(),
-    };
+      try {
+        await addMessage(paper.id, {
+          role: 'user',
+          content: content.trim(),
+        });
+        setInputValue('');
+        setLoading(true);
 
-    setMessages((prev) => [...prev, userMessage]);
-    setInputValue('');
-    setIsTyping(true);
+        // Get paper content for context
+        const paperContent = [
+          paper.summary,
+          paper.fullSummary,
+          paper.compliance,
+        ]
+          .filter(Boolean)
+          .join('\n\n');
 
-    // Simulate AI response
-    setTimeout(() => {
-      const botResponse = generateBotResponse(content.trim());
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'bot',
-        content: botResponse,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, botMessage]);
-      setIsTyping(false);
-    }, 1500);
-  };
+        // Prepare messages for API
+        const apiMessages = messages
+          .slice(-4)
+          .map(({ role, content }) => ({ role, content }));
 
-  const generateBotResponse = (question: string): string => {
-    const lowerQuestion = question.toLowerCase();
+        // Add current user message
+        apiMessages.push({
+          role: 'user',
+          content: content.trim(),
+        });
 
-    if (
-      lowerQuestion.includes('main finding') ||
-      lowerQuestion.includes('key finding')
-    ) {
-      return 'Based on my analysis of this paper, the main findings include significant improvements in accuracy and efficiency. The research demonstrates a novel approach that outperforms existing methods by 25-30%. The authors also identified three critical factors that contribute to the success of their methodology.';
-    } else if (
-      lowerQuestion.includes('methodology') ||
-      lowerQuestion.includes('method')
-    ) {
-      return 'The methodology employed in this study follows a rigorous experimental design. The researchers used a combination of quantitative and qualitative approaches, with a sample size of over 1,000 participants. They implemented proper control groups and used statistical analysis to validate their results. The study design ensures reproducibility and reliability of the findings.';
-    } else if (lowerQuestion.includes('limitation')) {
-      return 'The paper acknowledges several limitations: 1) The study was conducted in a controlled environment which may not reflect real-world conditions, 2) The sample size, while substantial, was limited to a specific demographic, 3) Long-term effects were not evaluated due to time constraints, and 4) Some variables could not be controlled for due to ethical considerations.';
-    } else if (
-      lowerQuestion.includes('application') ||
-      lowerQuestion.includes('practical')
-    ) {
-      return 'This research has several practical applications: 1) It can be immediately implemented in clinical settings to improve patient outcomes, 2) The methodology can be adapted for use in educational institutions, 3) Industry applications include process optimization and quality control, and 4) The findings inform policy decisions in relevant regulatory frameworks.';
-    } else if (
-      lowerQuestion.includes('relate') ||
-      lowerQuestion.includes('other research')
-    ) {
-      return 'This work builds upon previous research by Johnson et al. (2022) and extends the findings of Smith & Brown (2021). It contradicts some earlier assumptions made by Wilson (2020) while supporting the theoretical framework proposed by Davis et al. (2019). The authors position their work as a significant advancement in the field, bridging gaps between theoretical models and practical implementation.';
-    } else {
-      return "That's an interesting question about this research paper. Based on my analysis of the content, I can provide insights into various aspects of the study including its methodology, findings, implications, and connections to broader research. Could you be more specific about what aspect you'd like me to focus on? I'm here to help you understand this paper better!";
-    }
-  };
+        // Call chat API
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: apiMessages, paperContent }),
+        });
+
+        if (!response.ok) throw new Error('Failed to get response from AI');
+
+        const data = await response.json();
+        await addMessage(paper.id, {
+          role: 'assistant',
+          content: data.message.content,
+        });
+      } catch (error) {
+        console.error('Error sending message:', error);
+        await addMessage(paper.id, {
+          role: 'assistant',
+          content: 'Sorry, I encountered an error. Please try again later.',
+        });
+      } finally {
+        setLoading(false);
+      }
+    },
+    [isLoading, paper, messages, addMessage, setLoading]
+  );
+
+  // Memoize the handleSuggestedQuestion function
+  const handleSuggestedQuestion = useCallback(
+    (question: string) => {
+      handleSendMessage(question);
+    },
+    [handleSendMessage]
+  );
+
+  // Memoize the handleKeyDown function
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSendMessage(inputValue);
+      }
+    },
+    [inputValue, handleSendMessage]
+  );
+
+  // Render function for messages
+  const renderMessages = useCallback(() => {
+    return messages.map((message) => (
+      <div
+        key={message.id}
+        className={`flex gap-3 ${
+          message.role === 'user' ? 'justify-end' : 'justify-start'
+        } animate-fade-in`}
+      >
+        {message.role !== 'user' && (
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+            style={{
+              background: `linear-gradient(to bottom right, ${theme.secondary}, ${theme.primary})`,
+            }}
+          >
+            <Bot className="h-4 w-4 text-white" />
+          </div>
+        )}
+        <div className="w-full max-w-[90%] overflow-hidden">
+          <Card
+            className={`p-4 break-words w-full ${
+              message.role === 'user' ? 'bg-gradient-to-r' : ''
+            }`}
+            style={{
+              background:
+                message.role === 'user'
+                  ? `linear-gradient(to right, ${theme.primary}, ${theme.secondary})`
+                  : `${theme.muted}50`,
+              borderColor:
+                message.role === 'user' ? 'transparent' : `${theme.primary}20`,
+              color: message.role === 'user' ? 'white' : theme.foreground,
+              wordWrap: 'break-word',
+              overflowWrap: 'break-word',
+              whiteSpace: 'pre-wrap',
+              maxWidth: '100%',
+            }}
+          >
+            <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-headings:mt-0 prose-p:my-2 prose-pre:bg-gray-900 prose-pre:p-4 prose-pre:rounded-md">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  code: ({
+                    inline,
+                    className = '',
+                    children,
+                    ...props
+                  }: {
+                    inline?: boolean;
+                    className?: string;
+                    children?: React.ReactNode;
+                    // [key: string]: unknown;
+                  }) => {
+                    const match = /language-(\w+)/.exec(className || '');
+                    return !inline && match ? (
+                      <div className="relative">
+                        <SyntaxHighlighter
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          style={vscDarkPlus as any}
+                          language={match[1]}
+                          PreTag="div"
+                          className="rounded-md text-sm my-2 overflow-x-auto"
+                          customStyle={{
+                            margin: 0,
+                            padding: '1rem',
+                            backgroundColor: '#1E1E1E',
+                            borderRadius: '0.5rem',
+                          }}
+                          {...props}
+                        >
+                          {String(children).replace(/\n$/, '')}
+                        </SyntaxHighlighter>
+                      </div>
+                    ) : (
+                      <code
+                        className={`${className} bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm`}
+                        {...props}
+                      >
+                        {children}
+                      </code>
+                    );
+                  },
+                  a: (props) => (
+                    <a
+                      {...props}
+                      className="text-blue-500 hover:underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    />
+                  ),
+                  ul: (props) => (
+                    <ul className="list-disc pl-5 space-y-1" {...props} />
+                  ),
+                  ol: (props) => (
+                    <ol className="list-decimal pl-5 space-y-1" {...props} />
+                  ),
+                  blockquote: (props) => (
+                    <blockquote
+                      className="border-l-4 border-gray-300 pl-4 italic"
+                      {...props}
+                    />
+                  ),
+                }}
+              >
+                {message.content}
+              </ReactMarkdown>
+            </div>
+            <p
+              className="text-xs mt-2 opacity-80 text-right"
+              style={{
+                color:
+                  message.role === 'user'
+                    ? 'rgba(255, 255, 255, 0.8)'
+                    : `${theme.foreground}70`,
+              }}
+            >
+              {new Date(message.timestamp).toLocaleTimeString()}
+            </p>
+          </Card>
+        </div>
+        {message.role === 'user' && (
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+            style={{
+              background: `linear-gradient(to bottom right, ${theme.accent}, ${theme.accent}90)`,
+            }}
+          >
+            <User className="h-4 w-4 text-white" />
+          </div>
+        )}
+      </div>
+    ));
+  }, [messages, theme]);
 
   return (
-    <Dialog open={true} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
-        className="max-w-4xl max-h-[90vh] p-0 flex flex-col"
-        style={{ backgroundColor: theme.background }}
+        className="max-w-6xl w-[90vw] max-h-[90vh] p-0 flex flex-col"
+        style={{
+          backgroundColor: theme.background,
+          width: '90vw',
+          maxWidth: '1200px',
+        }}
       >
         <DialogHeader
           className="p-6 pb-4 border-b"
@@ -160,161 +353,66 @@ export function ChatBot({ paper, onClose }: ChatBotProps) {
                 </p>
               </div>
             </DialogTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="hover:scale-105 transition-transform duration-300"
-            >
-              <X className="h-4 w-4" />
-            </Button>
           </div>
         </DialogHeader>
 
-        {/* Suggested Questions */}
-        <div
-          className="p-4 border-b"
-          style={{
-            backgroundColor: `${theme.muted}30`,
-            borderColor: theme.border,
-          }}
-        >
-          <p
-            className="text-sm mb-3"
-            style={{ color: `${theme.foreground}70` }}
+        <div className="flex-1 overflow-hidden">
+          <ScrollArea
+            ref={scrollAreaRef}
+            className="h-full w-full overflow-x-hidden"
+            style={{
+              height: 'calc(90vh - 200px)',
+              maxWidth: '100%',
+            }}
           >
-            Suggested questions:
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {suggestedQuestions.map((question, index) => (
-              <Button
-                key={index}
-                variant="outline"
-                size="sm"
-                onClick={() => handleSendMessage(question)}
-                className="text-xs hover:scale-105 transition-all duration-300"
-                style={{
-                  borderColor: theme.primary,
-                }}
-              >
-                {question}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {/* Messages */}
-        <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
-          <div className="space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex gap-3 ${
-                  message.type === 'user' ? 'justify-end' : 'justify-start'
-                } animate-fade-in`}
-              >
-                {message.type === 'bot' && (
+            <div className="p-4 space-y-4 w-full max-w-full">
+              {renderMessages()}
+              {isLoading && (
+                <div className="flex gap-3 justify-start animate-fade-in">
                   <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                    className="w-8 h-8 rounded-full flex items-center justify-center"
                     style={{
                       background: `linear-gradient(to bottom right, ${theme.secondary}, ${theme.primary})`,
                     }}
                   >
                     <Bot className="h-4 w-4 text-white" />
                   </div>
-                )}
-                <Card
-                  className="max-w-[80%] p-4"
-                  style={{
-                    backgroundColor:
-                      message.type === 'user'
-                        ? `linear-gradient(to right, ${theme.primary}, ${theme.secondary})`
-                        : `${theme.muted}50`,
-                    borderColor:
-                      message.type === 'user'
-                        ? 'transparent'
-                        : `${theme.primary}20`,
-                    color: message.type === 'user' ? 'white' : theme.foreground,
-                  }}
-                >
-                  <p className="text-sm leading-relaxed">{message.content}</p>
-                  <p
-                    className="text-xs mt-2"
+                  <Card
+                    className="p-4 whitespace-pre-wrap break-words"
                     style={{
-                      color:
-                        message.type === 'user'
-                          ? 'rgba(255, 255, 255, 0.7)'
-                          : `${theme.foreground}70`,
+                      backgroundColor: `${theme.muted}50`,
+                      borderColor: `${theme.primary}20`,
+                      maxWidth: '90%',
+                      wordWrap: 'break-word',
                     }}
                   >
-                    {message.timestamp.toLocaleTimeString()}
-                  </p>
-                </Card>
-                {message.type === 'user' && (
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                    style={{
-                      background: `linear-gradient(to bottom right, ${theme.accent}, ${theme.accent}90)`,
-                    }}
-                  >
-                    <User className="h-4 w-4 text-white" />
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {isTyping && (
-              <div className="flex gap-3 justify-start animate-fade-in">
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center"
-                  style={{
-                    background: `linear-gradient(to bottom right, ${theme.secondary}, ${theme.primary})`,
-                  }}
-                >
-                  <Bot className="h-4 w-4 text-white" />
-                </div>
-                <Card
-                  className="p-4"
-                  style={{
-                    backgroundColor: `${theme.muted}50`,
-                    borderColor: `${theme.primary}20`,
-                  }}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="flex gap-1">
-                      <div
-                        className="w-2 h-2 rounded-full animate-bounce"
-                        style={{ backgroundColor: theme.primary }}
-                      ></div>
-                      <div
-                        className="w-2 h-2 rounded-full animate-bounce"
-                        style={{
-                          backgroundColor: theme.primary,
-                          animationDelay: '0.1s',
-                        }}
-                      ></div>
-                      <div
-                        className="w-2 h-2 rounded-full animate-bounce"
-                        style={{
-                          backgroundColor: theme.primary,
-                          animationDelay: '0.2s',
-                        }}
-                      ></div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
+                        {[0, 1, 2].map((i) => (
+                          <div
+                            key={i}
+                            className="w-2 h-2 rounded-full animate-bounce"
+                            style={{
+                              backgroundColor: theme.primary,
+                              animationDelay: `${i * 0.1}s`,
+                            }}
+                          />
+                        ))}
+                      </div>
+                      <span
+                        className="text-sm"
+                        style={{ color: `${theme.foreground}70` }}
+                      >
+                        AI is thinking...
+                      </span>
                     </div>
-                    <span
-                      className="text-sm"
-                      style={{ color: `${theme.foreground}70` }}
-                    >
-                      AI is thinking...
-                    </span>
-                  </div>
-                </Card>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
+                  </Card>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
 
-        {/* Input */}
         <div
           className="p-4 border-t"
           style={{
@@ -322,24 +420,44 @@ export function ChatBot({ paper, onClose }: ChatBotProps) {
             borderColor: theme.border,
           }}
         >
+          {messages.length <= 1 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+              {SUGGESTED_QUESTIONS.map((question) => (
+                <Button
+                  key={question}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSuggestedQuestion(question)}
+                  className="text-xs hover:scale-105 transition-all duration-300 text-left justify-start h-auto py-2 whitespace-normal"
+                  style={{
+                    borderColor: theme.primary,
+                    color: theme.foreground,
+                    backgroundColor: theme.background,
+                  }}
+                >
+                  {question}
+                </Button>
+              ))}
+            </div>
+          )}
+
           <div className="flex gap-2">
             <Input
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="Ask anything about this paper..."
-              onKeyPress={(e) =>
-                e.key === 'Enter' && handleSendMessage(inputValue)
-              }
               className="flex-1"
-              disabled={isTyping}
+              disabled={isLoading}
               style={{
                 backgroundColor: theme.background,
                 borderColor: theme.border,
+                color: theme.foreground,
               }}
             />
             <Button
               onClick={() => handleSendMessage(inputValue)}
-              disabled={!inputValue.trim() || isTyping}
+              disabled={!inputValue.trim() || isLoading}
               className="hover:scale-105 transition-all duration-300 text-white"
               style={{
                 background: `linear-gradient(to right, ${theme.secondary}, ${theme.primary})`,

@@ -53,26 +53,72 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: 'system',
-          content: `You are a helpful assistant specialized in analyzing and summarizing academic papers. 
-1. First, inspect the text and verify that it follows a valid research-paper structure (e.g., Abstract, Introduction, Methods/Materials, Results, Discussion, Conclusion). 
-2. If any key section is missing or out of order, respond with a concise diagnostic listing the missing or misordered sections and do not proceed to summarization. 
-3. If the structure is valid, generate a broad, high-level summary that covers:
-   - The paper’s main objectives and research questions
-   - Key methods and approach
-   - Principal findings and contributions
-   - Implications, significance, and potential future directions`,
+          content: `
+You are a helpful assistant specialized in analyzing and summarizing academic papers.
+
+=== Section 1: Structure Verification ===
+1. Inspect the provided text and verify it follows a valid research-paper structure:
+   - Abstract
+   - Introduction
+   - Methods (or Materials and Methods)
+   - Results
+   - Discussion
+   - Conclusion
+2. If any key section is missing, misnamed, or out of order, respond with a concise diagnostic listing those issues (e.g. "Missing Methods section", "Discussion appears before Results").
+
+=== Section 2: Summarization (Long Form) ===
+After the structure analysis, produce a thorough, long-form summary that covers:
+- The paper's main objectives and research questions
+- Detailed description of key methods and approach
+- Principal findings and contributions, with specifics
+- Implications, significance, and potential future directions
+- Any notable strengths or limitations you observe
+
+Format your response EXACTLY as follows:
+
+=== STRUCTURE ANALYSIS ===
+[Your structure analysis here]
+
+=== SUMMARY ===
+[Your detailed summary here]`.trim(),
         },
         {
           role: 'user',
           content: `Here is the full text of the paper:\n\n${fullText}`,
         },
       ],
-
       temperature: 0.2,
     });
 
-    const summary = response.choices[0].message.content?.trim() ?? '';
-    return NextResponse.json({ summary }, { status: 200 });
+    // Parse the AI's response
+    const aiResponse = response.choices[0].message.content?.trim() || '';
+    
+    // Extract structure analysis and summary sections
+    let structureAnalysis = 'No structure analysis available.';
+    let summary = 'No summary available.';
+    
+    const structureMatch = /=== STRUCTURE ANALYSIS ===\s*([\s\S]*?)(?=\n=== SUMMARY ===|$)/i.exec(aiResponse);
+    const summaryMatch = /=== SUMMARY ===\s*([\s\S]*)/i.exec(aiResponse);
+    
+    if (structureMatch && structureMatch[1]) {
+      structureAnalysis = structureMatch[1].trim();
+    }
+    
+    if (summaryMatch && summaryMatch[1]) {
+      summary = summaryMatch[1].trim();
+    } else if (!structureMatch) {
+      // If the response doesn't follow the expected format, use the whole response as summary
+      summary = aiResponse.trim();
+    }
+
+    return NextResponse.json(
+      { 
+        summary: summary,
+        fullSummary: summary,
+        compliance: structureAnalysis 
+      }, 
+      { status: 200 }
+    );
   } catch (err: unknown) {
     console.error('/api/paper error:', err);
     return NextResponse.json(

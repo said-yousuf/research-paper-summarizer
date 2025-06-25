@@ -334,7 +334,11 @@ export function PaperCard({ paper }: PaperCardProps) {
 
       {/* ChatBot Modal */}
       {showChatBot && (
-        <ChatBot paper={paper} onClose={() => setShowChatBot(false)} />
+        <ChatBot
+          paper={paper}
+          onClose={() => setShowChatBot(false)}
+          open={showChatBot}
+        />
       )}
     </>
   );
