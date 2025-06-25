@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     // Call OpenRouter with the extracted text
     const response = await orClient.chat.completions.create({
-      model: 'deepseek/deepseek-r1:free',
+      model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
       messages: [
         {
           role: 'system',
@@ -87,23 +87,25 @@ Format your response EXACTLY as follows:
           content: `Here is the full text of the paper:\n\n${fullText}`,
         },
       ],
-      temperature: 0.2,
     });
 
     // Parse the AI's response
     const aiResponse = response.choices[0].message.content?.trim() || '';
-    
+
     // Extract structure analysis and summary sections
     let structureAnalysis = 'No structure analysis available.';
     let summary = 'No summary available.';
-    
-    const structureMatch = /=== STRUCTURE ANALYSIS ===\s*([\s\S]*?)(?=\n=== SUMMARY ===|$)/i.exec(aiResponse);
+
+    const structureMatch =
+      /=== STRUCTURE ANALYSIS ===\s*([\s\S]*?)(?=\n=== SUMMARY ===|$)/i.exec(
+        aiResponse
+      );
     const summaryMatch = /=== SUMMARY ===\s*([\s\S]*)/i.exec(aiResponse);
-    
+
     if (structureMatch && structureMatch[1]) {
       structureAnalysis = structureMatch[1].trim();
     }
-    
+
     if (summaryMatch && summaryMatch[1]) {
       summary = summaryMatch[1].trim();
     } else if (!structureMatch) {
@@ -112,11 +114,11 @@ Format your response EXACTLY as follows:
     }
 
     return NextResponse.json(
-      { 
+      {
         summary: summary,
         fullSummary: summary,
-        compliance: structureAnalysis 
-      }, 
+        compliance: structureAnalysis,
+      },
       { status: 200 }
     );
   } catch (err: unknown) {
