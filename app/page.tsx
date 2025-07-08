@@ -195,7 +195,7 @@ export default function HomePage() {
                       alt="Research Papers Dashboard"
                       className="rounded-2xl shadow-lg"
                       height="500"
-                      src="/placeholder.svg?height=500&width=600"
+                      src="/ai.jpeg?height=500&width=600"
                       width="600"
                     />
                     <div
